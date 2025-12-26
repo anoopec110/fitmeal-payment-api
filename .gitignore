@@ -1,0 +1,14 @@
+# Visual Studio
+.vs/
+
+# Build outputs
+bin/
+obj/
+
+# User-specific files
+*.user
+*.suo
+
+# App settings (secrets)
+appsettings.Development.json
+appsettings.Production.json
