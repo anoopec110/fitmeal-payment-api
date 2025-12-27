@@ -1,7 +1,9 @@
-﻿using fitmeal_workout.Models;
+﻿using fitmeal_workout.DatabaseContext;
+using fitmeal_workout.Models;
 using Microsoft.AspNetCore.Mvc;
 using Org.BouncyCastle.Asn1.Ocsp;
 using Razorpay.Api;
+using System.Threading.Tasks;
 
 namespace fitmeal_workout.Controllers
 {
@@ -11,9 +13,12 @@ namespace fitmeal_workout.Controllers
     {
         private readonly IConfiguration _configuration;
 
-        public PaymentController(IConfiguration configuration)
+        private readonly ApplicationDbContext _context;
+
+        public PaymentController(IConfiguration configuration, ApplicationDbContext cntext)
         {
             _configuration = configuration;
+            _context = cntext;          
         }
         [HttpPost("create-order")]
         public IActionResult createOrder([FromBody] createOrderRequest request)
@@ -42,7 +47,7 @@ namespace fitmeal_workout.Controllers
             });
         }
         [HttpPost("payment-verification")]
-        public IActionResult paymentVerification([FromBody] paymentValidationModel request)
+        public async Task<IActionResult> paymentVerification([FromBody] OrderModel request)
         {
             try
             {
@@ -51,11 +56,14 @@ namespace fitmeal_workout.Controllers
                 string secret = _configuration["RazorPay:RazorPaySceret"];
 
                 Dictionary<string, string> attributes = new Dictionary<string, string>();
-                attributes.Add("razorpay_order_id", request.razorpay_order_id);
-                attributes.Add("razorpay_payment_id", request.razorpay_payment_id);
-                attributes.Add("razorpay_signature", request.razorpay_signature);
+                attributes.Add("razorpay_order_id", request.RazorpayOrderId);
+                attributes.Add("razorpay_payment_id", request.RazorpayPaymentId);
+                attributes.Add("razorpay_signature", request.RazorpaySignature);
 
                 Utils.verifyPaymentSignature(attributes);
+
+                await _context.ordersDetails.AddAsync(request);
+                await _context.SaveChangesAsync();
 
 
                 return Ok(new { status = "success" });
