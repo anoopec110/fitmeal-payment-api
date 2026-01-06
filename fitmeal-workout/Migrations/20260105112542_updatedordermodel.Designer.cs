@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using fitmeal_workout.DatabaseContext;
@@ -11,9 +12,11 @@ using fitmeal_workout.DatabaseContext;
 namespace fitmeal_workout.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260105112542_updatedordermodel")]
+    partial class updatedordermodel
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -57,9 +60,11 @@ namespace fitmeal_workout.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("RazorpayPaymentId")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("RazorpaySignature")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("paymentStatus")
@@ -69,38 +74,6 @@ namespace fitmeal_workout.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("ordersDetails");
-                });
-
-            modelBuilder.Entity("fitmeal_workout.Models.createOrderRequest", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<decimal>("amount")
-                        .HasColumnType("numeric");
-
-                    b.Property<string>("email")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("name")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("phoneNumber")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("planCode")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("userPlanDetails");
                 });
 #pragma warning restore 612, 618
         }

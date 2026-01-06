@@ -8,5 +8,8 @@ namespace fitmeal_workout.DatabaseContext
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
 
         public DbSet<OrderModel> ordersDetails { get; set; }
+        public DbSet<createOrderRequest> userPlanDetails { get; set; }
+
+        public DbSet<ExceptionDetails> ExceptionDetails { get; set; }
     }
 }

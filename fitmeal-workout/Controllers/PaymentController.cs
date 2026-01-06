@@ -1,6 +1,7 @@
 ﻿using fitmeal_workout.DatabaseContext;
 using fitmeal_workout.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Org.BouncyCastle.Asn1.Ocsp;
 using Razorpay.Api;
 using System.Threading.Tasks;
@@ -21,14 +22,16 @@ namespace fitmeal_workout.Controllers
             _context = cntext;          
         }
         [HttpPost("create-order")]
-        public IActionResult createOrder([FromBody] createOrderRequest request)
+        public async Task<IActionResult> createOrder([FromBody] createOrderRequest request)
         {
-            var key = _configuration["RazorPay:RazorPayKey"];
-            var sceret = _configuration["RazorPay:RazorPaySceret"];
+            try
+            {
+                var key = _configuration["RazorPay:RazorPayKey"];
+                var sceret = _configuration["RazorPay:RazorPaySceret"];
 
-            RazorpayClient razorpayClient = new RazorpayClient(key, sceret);
+                RazorpayClient razorpayClient = new RazorpayClient(key, sceret);
 
-            Dictionary<string, object> data = new Dictionary<string, object>()
+                Dictionary<string, object> data = new Dictionary<string, object>()
             {
 
             { "amount", request.amount * 100 }, // paise
@@ -38,13 +41,34 @@ namespace fitmeal_workout.Controllers
 
             };
 
-            Order order = razorpayClient.Order.Create(data);
-            return Ok(new
+                Order order = razorpayClient.Order.Create(data);
+
+                OrderModel model = new OrderModel()
+                {
+                    RazorpayOrderId = order["id"].ToString(),
+                    Amount = request.amount,
+                    paymentStatus = "PENDING",
+                    Name = request.name,
+                    Phone = request.phoneNumber,
+                    Email = request.email,
+                    PlanCode = request.planCode
+
+                };
+
+                    await _context.ordersDetails.AddAsync(model);
+                await _context.SaveChangesAsync();
+                return Ok(new
+                {
+                    orderId = order["id"].ToString(),
+                    amount = request.amount,
+                    key = key
+                });
+
+            }catch(Exception ex)
             {
-                orderId = order["id"].ToString(),
-                amount = request.amount,
-                key = key
-            });
+                return BadRequest(ex.Message);
+            }
+            
         }
         [HttpPost("payment-verification")]
         public async Task<IActionResult> paymentVerification([FromBody] OrderModel request)
@@ -62,11 +86,26 @@ namespace fitmeal_workout.Controllers
 
                 Utils.verifyPaymentSignature(attributes);
 
-                await _context.ordersDetails.AddAsync(request);
-                await _context.SaveChangesAsync();
+                var existingOrder = await _context.ordersDetails.FirstOrDefaultAsync(data => 
+                data.RazorpayOrderId == request.RazorpayOrderId);
+
+                if(existingOrder != null)
+                {
+                    existingOrder.paymentStatus = "PENDING";
+                    existingOrder.RazorpayPaymentId = request.RazorpayPaymentId;
+                    existingOrder.RazorpaySignature = request.RazorpaySignature;
+                    await _context.SaveChangesAsync();
+                }
+                else
+                {
+                    return NotFound(new
+                    {
+                        message = "Order not found during payment verification"
+                    });
+                }
 
 
-                return Ok(new { status = "success" });
+                    return Ok(new { status = "Verified" });
             }
             catch (Exception ex)
             {
@@ -74,6 +113,21 @@ namespace fitmeal_workout.Controllers
 
             }
 
+        }
+
+        [HttpGet("order-status")]
+        public async Task<IActionResult> GetOrderStatus(string orderId)
+        {
+            var orderDetails = await _context.ordersDetails.FirstOrDefaultAsync(data => data.RazorpayOrderId == orderId);
+
+            if(orderDetails == null)
+            {
+                return NotFound("orderId not found");
+            }
+            else
+            {
+                return Ok(new { status = orderDetails.paymentStatus });
+            }
         }
     }
 }
